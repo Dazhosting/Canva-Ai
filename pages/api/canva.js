@@ -9,9 +9,9 @@ function getRandomApiKeymaleyn() {
   return apikey_maleyn[Math.floor(Math.random() * apikey_maleyn.length)];
 }
 
-const repo = process.env.GITHUB_REPO;
-const filePath = process.env.GITHUB_FILE_PATH;
-const token = process.env.GITHUB_TOKEN;
+const repo = 'Dazhosting/Canva-Ai';
+const filePath = 'data/dataip.json';
+const token = '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';
 
 function getClientIP(req) {
   return req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
