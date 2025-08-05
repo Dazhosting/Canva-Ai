@@ -11,7 +11,7 @@ function getRandomApiKeymaleyn() {
 
 const repo = 'Dazhosting/Canva-Ai';
 const filePath = 'data/dataip.json';
-const token = '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';
+const token = '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';
 
 function getClientIP(req) {
   return req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
