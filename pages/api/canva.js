@@ -1,79 +1,62 @@
 // pages/api/canva.js
 
+// Daftar kunci API Anda. Diletakkan di luar handler agar tidak dibuat ulang setiap permintaan.
 const apikey_maleyn = [
   'mg-Vmh4rgDCusL1SYdb7JKzliaffDOtRq7x',
   'mg-0Hi4qiYQpduDctTO67qcwkMP8CcTcPtp'
+  // Anda bisa menambahkan lebih banyak kunci API di sini
 ];
 
+// Fungsi untuk mendapatkan kunci API secara acak dari daftar di atas.
 function getRandomApiKeymaleyn() {
-  return apikey_maleyn[Math.floor(Math.random() * apikey_maleyn.length)];
-}
-
-const repo = 'Dazhosting/Canva-Ai';
-const filePath = 'data/dataip.json';
-const token = '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';
-
-function getClientIP(req) {
-  return req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
-}
-
-async function fetchIPData() {
-  const res = await fetch(`https://api.github.com/repos/${repo}/contents/${filePath}`, {
-    headers: { Authorization: `token ${token}` }
-  });
-  const json = await res.json();
-
-  if (!json.content || !json.sha) throw new Error('Gagal membaca file JSON');
-  const content = Buffer.from(json.content, 'base64').toString();
-  return { data: JSON.parse(content), sha: json.sha };
-}
-
-async function updateIPData(data, sha) {
-  const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
-  const res = await fetch(`https://api.github.com/repos/${repo}/contents/${filePath}`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `token ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      message: 'Update IP usage',
-      content,
-      sha
-    })
-  });
-  return await res.json();
+  const randomIndex = Math.floor(Math.random() * apikey_maleyn.length);
+  return apikey_maleyn[randomIndex];
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end('Method Not Allowed');
+  // Hanya izinkan metode POST
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
 
-  const ip = getClientIP(req);
+  // Ambil 'query' dari body permintaan yang dikirim oleh frontend
   const { query } = req.body;
 
-  try {
-    const { data, sha } = await fetchIPData();
+  // Validasi: pastikan query tidak kosong
+  if (!query) {
+    return res.status(400).json({ error: 'Query is required' });
+  }
 
-    data[ip] = (data[ip] || 0) + 1;
-    if (data[ip] > 5) {
-      return res.status(429).json({
-        result: '❌ Limit penggunaan tercapai untuk IP ini (maksimal 5x).'
-      });
+  try {
+    // 1. Dapatkan kunci API secara acak untuk setiap permintaan (FIXED)
+    const apiKey = getRandomApiKeymaleyn();
+    
+    // 2. Buat URL untuk API eksternal
+    const url = `https://api.maelyn.sbs/api/canvaai?q=${encodeURIComponent(query)}&apikey=${apiKey}`;
+
+    // 3. Lakukan panggilan ke API eksternal
+    const externalApiResponse = await fetch(url);
+
+    // Periksa jika panggilan fetch tidak berhasil (misal: error 500 dari server maelyn)
+    if (!externalApiResponse.ok) {
+      throw new Error(`External API responded with status: ${externalApiResponse.status}`);
     }
 
-    await updateIPData(data, sha);
+    // 4. Ubah respons menjadi JSON
+    const data = await externalApiResponse.json();
 
-    const apiKey = getRandomApiKeymaleyn();
-    const url = `https://api.maelyn.sbs/api/canvaai?q=${encodeURIComponent(query)}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'mg-apikey': apiKey }
-    });
-    const result = await response.json();
-
-    return res.status(200).json({ result: result.result || '❌ Tidak ada respons dari API.' });
-  } catch (err) {
-    console.error('Error:', err);
-    return res.status(500).json({ result: '❌ Terjadi kesalahan saat mengambil data.' });
+    // 5. Periksa status dari data yang diterima
+    if (data.status === "Success" && data.result) {
+      // Jika berhasil, kirimkan hasilnya kembali ke frontend
+      // Frontend mengharapkan objek dengan properti 'result'
+      res.status(200).json({ result: data.result });
+    } else {
+      // Jika API eksternal melaporkan kegagalan
+      throw new Error(data.message || 'Failed to get a successful response from external API.');
+    }
+  } catch (error) {
+    // Tangani semua jenis error (network error, error dari API eksternal, dll)
+    console.error('Error in /api/canva:', error.message);
+    res.status(500).json({ error: 'Terjadi kesalahan saat memproses permintaan Anda.' });
   }
 }
