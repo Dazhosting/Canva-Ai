@@ -198,7 +198,7 @@ export default function App() {
           <nav style={styles.sidebar.nav}>
             <a href="#" style={{...styles.sidebar.navLink, ...styles.sidebar.navLinkActive}}>Obrolan Baru</a>
             <a href="#" style={styles.sidebar.navLink}>Riwayat</a>
-            <a href="#" style={styles.sidebar.navLink}>Dokumentasi API</a>
+            <a href="/document.html" style={styles.sidebar.navLink}>Dokumentasi API</a>
           </nav>
         </div>
         
