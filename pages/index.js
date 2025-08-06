@@ -1,104 +1,174 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 
-// --- Helper & Komponen Ikon (Tidak Berubah) ---
-const useInjectKeyframes = () => {
-  useEffect(() => {
-    const styleId = 'spinner-keyframes';
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style');
-      style.id = styleId;
-      style.innerHTML = `
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-      `;
-      document.head.appendChild(style);
-    }
-  }, []);
+// --- Icon Components (using Lucide-React style SVGs for better visuals) ---
+const Icon = ({ name, className = 'w-6 h-6' }) => {
+  const icons = {
+    menu: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <line x1="4" x2="20" y1="12" y2="12" />
+        <line x1="4" x2="20" y1="6" y2="6" />
+        <line x1="4" x2="20" y1="18" y2="18" />
+      </svg>
+    ),
+    close: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <line x1="18" y1="6" x2="6" y2="18" />
+        <line x1="6" y1="6" x2="18" y2="18" />
+      </svg>
+    ),
+    copy: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+      </svg>
+    ),
+    check: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+    ),
+    send: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="m22 2-7 20-4-9-9-4Z" />
+        <path d="M22 2 11 13" />
+      </svg>
+    ),
+    bot: (
+       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M12 8V4H8" />
+        <rect width="16" height="12" x="4" y="8" rx="2" />
+        <path d="M2 14h2" />
+        <path d="M20 14h2" />
+        <path d="M15 13v2" />
+        <path d="M9 13v2" />
+      </svg>
+    ),
+    logo: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+            <path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9-9 9-9-1.8-9-9 1.8-9 9-9Z"/>
+            <path d="M8 12h8"/>
+            <path d="M12 8v8"/>
+        </svg>
+    )
+  };
+  return icons[name] || null;
 };
 
-const Icon = ({ type, size = 24, color = 'currentColor' }) => {
-    const icons = {
-        menu: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
-        close: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
-        copy: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>,
-        check: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
-    };
-    return icons[type] || null;
-};
+// --- Content Block Components ---
 
-// --- Komponen Filter Konten ---
+const HtmlPreview = ({ content }) => (
+  <div className="border border-slate-200 rounded-lg overflow-hidden my-4 bg-white">
+    <div className="px-4 py-2 bg-slate-50 text-slate-600 font-semibold text-sm border-b border-slate-200">
+      Pratinjau HTML
+    </div>
+    <iframe className="w-full h-52" srcDoc={content} title="HTML Preview" sandbox="allow-scripts" />
+  </div>
+);
 
-// Filter 1: Untuk Pratinjau HTML (Live Preview)
-const HtmlPreview = ({ content }) => {
-    const styles = {
-        container: { border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', margin: '1rem 0' },
-        header: { padding: '0.5rem 1rem', backgroundColor: '#f9fafb', color: '#4b5563', fontWeight: 600, fontSize: '0.9rem', borderBottom: '1px solid #e5e7eb' },
-        iframe: { width: '100%', height: '200px', border: 'none' }
-    };
-    return (
-        <div style={styles.container}>
-            <div style={styles.header}>Pratinjau HTML</div>
-            <iframe style={styles.iframe} srcDoc={content} title="HTML Preview" sandbox="allow-scripts" />
-        </div>
-    );
-};
-
-// Filter 2: Untuk Blok Kode (JavaScript, CSS, dll.)
 const CodeBlock = ({ language, content }) => {
-    const [isCopied, setIsCopied] = useState(false);
-    const handleCopy = () => {
+  const [isCopied, setIsCopied] = useState(false);
+  const handleCopy = () => {
+    // Using a fallback for environments where navigator.clipboard might not be available
+    try {
         navigator.clipboard.writeText(content).then(() => {
             setIsCopied(true);
             setTimeout(() => setIsCopied(false), 2000);
         });
-    };
-    const styles = {
-        container: { position: 'relative', backgroundColor: '#2d2d2d', borderRadius: '8px', margin: '1rem 0', color: '#f8f8f2', fontSize: '0.9rem' },
-        header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 1rem', backgroundColor: '#3a3a3a', borderTopLeftRadius: '8px', borderTopRightRadius: '8px' },
-        language: { color: '#ccc', fontSize: '0.85rem', textTransform: 'uppercase' },
-        copyButton: { background: 'none', border: '1px solid #555', color: '#ccc', cursor: 'pointer', padding: '0.25rem 0.5rem', borderRadius: '5px', display: 'flex', alignItems: 'center', gap: '0.4rem', transition: 'background-color 0.2s' },
-        pre: { padding: '1rem', overflowX: 'auto', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' },
-    };
-    return (
-        <div style={styles.container}>
-            <div style={styles.header}>
-                <span style={styles.language}>{language}</span>
-                <button onClick={handleCopy} style={styles.copyButton} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#4a4a4a'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                    {isCopied ? <Icon type="check" size={16} /> : <Icon type="copy" size={16} />}
-                    {isCopied ? 'Tersalin!' : 'Salin'}
-                </button>
-            </div>
-            <pre style={styles.pre}><code>{content}</code></pre>
-        </div>
-    );
+    } catch (err) {
+        const textArea = document.createElement('textarea');
+        textArea.value = content;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        } catch (err) {
+            console.error('Fallback copy failed', err);
+        }
+        document.body.removeChild(textArea);
+    }
+  };
+
+  return (
+    <div className="bg-[#282c34] rounded-lg my-4 overflow-hidden">
+      <div className="flex justify-between items-center px-4 py-2 bg-[#21252b]">
+        <span className="text-slate-400 text-xs font-sans font-semibold uppercase">{language}</span>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-2 text-slate-400 hover:text-white text-xs font-semibold px-2 py-1 rounded-md transition-colors duration-200 bg-[#353a42] hover:bg-[#40454f]"
+        >
+          {isCopied ? <Icon name="check" className="w-3 h-3 text-emerald-400" /> : <Icon name="copy" className="w-3 h-3" />}
+          {isCopied ? 'Tersalin!' : 'Salin Kode'}
+        </button>
+      </div>
+      <pre className="p-4 text-sm overflow-x-auto text-[#abb2bf] font-mono">
+        <code>{content}</code>
+      </pre>
+    </div>
+  );
 };
 
-// Filter 3: Untuk Teks Biasa / Markdown
-const TextBlock = ({ content }) => {
-    return <ReactMarkdown>{content}</ReactMarkdown>;
+const TextBlock = ({ content }) => (
+    <div className="prose prose-slate max-w-none prose-p:text-slate-700 prose-headings:text-slate-800 prose-strong:text-slate-800">
+        <ReactMarkdown>{content}</ReactMarkdown>
+    </div>
+);
+
+const renderContentBlock = (block, index) => {
+    switch (block.type) {
+      case 'html':
+        return <HtmlPreview key={index} content={block.content} />;
+      case 'javascript':
+      case 'css':
+      case 'python':
+      case 'jsx':
+        return <CodeBlock key={index} language={block.type} content={block.content} />;
+      case 'text':
+      default:
+        return <TextBlock key={index} content={block.content} />;
+    }
 };
 
-// --- Komponen Utama ---
+
+// --- Main Application Component ---
 export default function Home() {
-  useInjectKeyframes();
-  useEffect(() => { document.title = "Chat AI Canva"; }, []);
-
   const [input, setInput] = useState('');
   const [result, setResult] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isButtonHovered, setIsButtonHovered] = useState(false);
-  const [isTextareaFocused, setIsTextareaFocused] = useState(false);
+  const textareaRef = useRef(null);
+  const resultContainerRef = useRef(null);
+
+  // Set document title on mount
+  useEffect(() => {
+    document.title = "Chat AI Canva | Antarmuka Modern";
+  }, []);
+  
+  // Auto-resize textarea height
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [input]);
+  
+  // Scroll to bottom of results when new content is added
+  useEffect(() => {
+    if (resultContainerRef.current) {
+      resultContainerRef.current.scrollTop = resultContainerRef.current.scrollHeight;
+    }
+  }, [result, loading, error]);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
     setLoading(true);
-    setResult([]);
+    setResult([]); 
     setError('');
-
+    
     try {
       const res = await fetch('/api/canva', {
         method: 'POST',
@@ -113,7 +183,6 @@ export default function Home() {
 
       const data = await res.json();
       
-      // Pastikan respons adalah array, jika tidak, bungkus dalam array atau tampilkan error
       if (Array.isArray(data.result)) {
         setResult(data.result);
       } else {
@@ -128,75 +197,108 @@ export default function Home() {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-  };
-  
-  const renderContentBlock = (block, index) => {
-    const language = block.type === 'text' || block.type === 'html' ? block.type : 'code';
-    switch (block.type) {
-      case 'html':
-        return <HtmlPreview key={index} content={block.content} />;
-      case 'javascript':
-      case 'css':
-      case 'python': // Menambahkan contoh lain
-        return <CodeBlock key={index} language={block.type} content={block.content} />;
-      case 'text':
-      default:
-        return <TextBlock key={index} content={block.content} />;
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
-  const styles = { /* ... Objek styling tidak berubah ... */ 
-    page: { backgroundColor: '#f9fafb' },
-    container: { maxWidth: 800, margin: '0 auto', padding: '2rem 1.5rem', minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', color: '#333' },
-    topBar: { display: 'flex', alignItems: 'center', marginBottom: '2.5rem' },
-    menuButton: { background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem', marginRight: '1rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.2s' },
-    header: { textAlign: 'center', flexGrow: 1 },
-    title: { fontSize: '2.5rem', fontWeight: 700, background: 'linear-gradient(90deg, #4b6cb7, #182848)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 },
-    subtitle: { fontSize: '1.1rem', color: '#666', marginTop: '0.5rem' },
-    form: { display: 'flex', flexDirection: 'column', gap: '1rem' },
-    textarea: { width: '100%', padding: '1rem', fontSize: '1rem', borderRadius: '8px', border: `1px solid ${isTextareaFocused ? '#4b6cb7' : '#ddd'}`, boxShadow: isTextareaFocused ? '0 0 0 3px rgba(75, 108, 183, 0.2)' : '0 1px 2px rgba(0,0,0,0.05)', resize: 'vertical', minHeight: 120, transition: 'border-color 0.2s, box-shadow 0.2s', outline: 'none', backgroundColor: '#fff' },
-    button: { padding: '0.75rem 1.5rem', fontSize: '1rem', fontWeight: 600, color: '#fff', backgroundColor: '#4b6cb7', border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'background-color 0.2s, transform 0.1s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' },
-    buttonHover: { backgroundColor: '#3a539b', transform: 'translateY(-2px)' },
-    buttonDisabled: { backgroundColor: '#a0a0a0', cursor: 'not-allowed' },
-    loader: { border: '4px solid #f3f3f3', borderTop: '4px solid #4b6cb7', borderRadius: '50%', width: 20, height: 20, animation: 'spin 1s linear infinite' },
-    resultContainer: { marginTop: '2.5rem', backgroundColor: '#ffffff', border: '1px solid #e5e7eb', padding: '1.5rem 2rem', borderRadius: '8px', minHeight: 100, boxShadow: '0 4px 6px rgba(0,0,0,0.05)' },
-    resultTitle: { fontSize: '1.2rem', fontWeight: 600, marginBottom: '1rem', color: '#182848' },
-  };
-
-  const Sidebar = ({ isOpen, onClose }) => { /* ... Komponen Sidebar tidak berubah ... */ if(!isOpen) return null; return( <div style={{position:'fixed', top:0, left:0, width:280, height:'100%', background:'white', zIndex:1000, padding:'1rem', boxShadow:'2px 0 5px rgba(0,0,0,0.1)'}}><button onClick={onClose} style={{float:'right'}}>X</button><h2>Menu</h2><a href="#">Docs API</a></div> )};
-
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-        <div style={styles.topBar}>
-            <button onClick={() => setIsSidebarOpen(true)} style={styles.menuButton} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#e0e0e0'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                <Icon type="menu" />
+    <div className="bg-slate-50 font-sans text-slate-800 flex h-screen">
+      {/* --- Sidebar --- */}
+      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0`}>
+        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+            <div className="flex items-center gap-3">
+                <Icon name="logo" className="w-7 h-7 text-indigo-600"/>
+                <h2 className="font-bold text-lg text-slate-800">AI Canva</h2>
+            </div>
+            <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-1 rounded-full hover:bg-slate-100">
+                <Icon name="close" className="w-5 h-5" />
             </button>
-            <header style={styles.header}>
-                <h1 style={styles.title}>🎨 Chat AI Canva</h1>
-                <p style={styles.subtitle}>Dapatkan ide, teks, dan kode instan dari AI</p>
-            </header>
         </div>
-
-        <div style={styles.form}>
-          <textarea style={styles.textarea} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} onFocus={() => setIsTextareaFocused(true)} onBlur={() => setIsTextareaFocused(false)} placeholder="Kirim permintaan ke API Anda..." disabled={loading} rows={5} />
-          <button onClick={handleSend} style={{ ...styles.button, ...(isButtonHovered && !loading ? styles.buttonHover : {}), ...(loading ? styles.buttonDisabled : {})}} disabled={loading || !input.trim()} onMouseEnter={() => setIsButtonHovered(true)} onMouseLeave={() => setIsButtonHovered(false)}>
-            {loading ? (<><div style={styles.loader}></div><span>Memproses...</span></>) : ('Kirim Permintaan')}
-          </button>
-        </div>
-
-        {(result.length > 0 || loading || error) && (
-          <div style={styles.resultContainer}>
-            <h2 style={styles.resultTitle}>Jawaban AI</h2>
-            {loading && <p>⏳ Sedang menunggu jawaban dari AI, mohon tunggu sebentar...</p>}
-            {error && <p style={{ color: '#d9534f' }}>❌ {error}</p>}
-            <div>{result.map(renderContentBlock)}</div>
-          </div>
-        )}
+        <nav className="p-4">
+            <a href="#" className="block px-3 py-2 rounded-md text-sm font-medium text-slate-700 bg-slate-100">Obrolan Baru</a>
+            <a href="#" className="block px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-100 mt-1">Riwayat</a>
+            <a href="#" className="block px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-100 mt-1">Dokumentasi API</a>
+        </nav>
       </div>
+      
+      {/* --- Main Content --- */}
+      <div className="flex-1 flex flex-col relative">
+        {/* --- Top Bar --- */}
+        <header className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-10">
+          <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-1 rounded-full hover:bg-slate-100">
+            <Icon name="menu" className="w-6 h-6" />
+          </button>
+          <div className="flex-1 text-center lg:text-left">
+            <h1 className="text-lg font-semibold text-slate-800">Antarmuka Chat AI</h1>
+          </div>
+        </header>
+
+        {/* --- Chat Area --- */}
+        <main ref={resultContainerRef} className="flex-1 overflow-y-auto p-4 md:p-8">
+            <div className="max-w-3xl mx-auto">
+                {result.length === 0 && !loading && !error && (
+                    <div className="text-center py-20">
+                        <Icon name="bot" className="w-16 h-16 mx-auto text-slate-300"/>
+                        <h2 className="mt-4 text-2xl font-bold text-slate-700">Chat AI Canva</h2>
+                        <p className="mt-2 text-slate-500">Mulai percakapan dengan mengirimkan permintaan di bawah.</p>
+                    </div>
+                )}
+
+                {result.length > 0 && (
+                    <div className="space-y-6">
+                        {result.map(renderContentBlock)}
+                    </div>
+                )}
+
+                {loading && (
+                    <div className="flex items-center gap-3 p-4 bg-white rounded-lg shadow-sm border border-slate-200">
+                        <div className="w-5 h-5 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                        <p className="text-slate-600 font-medium">AI sedang memproses, mohon tunggu...</p>
+                    </div>
+                )}
+
+                {error && (
+                    <div className="p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg">
+                        <p><strong className="font-semibold">Terjadi Kesalahan:</strong> {error}</p>
+                    </div>
+                )}
+            </div>
+        </main>
+        
+        {/* --- Input Form --- */}
+        <footer className="p-4 md:p-6 bg-white/60 backdrop-blur-sm border-t border-slate-200">
+          <div className="max-w-3xl mx-auto">
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Kirim permintaan ke AI... (misal: 'buatkan tombol login dengan efek hover')"
+                disabled={loading}
+                rows={1}
+                className="w-full p-4 pr-14 text-base bg-white border border-slate-300 rounded-xl resize-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm"
+              />
+              <button
+                onClick={handleSend}
+                disabled={loading || !input.trim()}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed enabled:bg-indigo-600 enabled:text-white enabled:hover:bg-indigo-700"
+              >
+                <Icon name="send" className="w-5 h-5" />
+              </button>
+            </div>
+             <p className="text-center text-xs text-slate-400 mt-2">
+                Chat AI Canva dapat memberikan informasi yang tidak akurat. Verifikasi respons penting.
+            </p>
+          </div>
+        </footer>
+      </div>
+      
+      {/* Overlay for mobile sidebar */}
+      {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/30 z-20 lg:hidden"></div>}
     </div>
   );
-  }
-  
+    }
+    
