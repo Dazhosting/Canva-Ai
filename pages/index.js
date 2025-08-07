@@ -42,7 +42,7 @@ export default function Home() {
           </button>
           {menuOpen && (
             <div style={styles.dropdown}>
-              <button style={styles.dropdownButton} onClick={() => window.location.href = './document.html'}>
+              <button style={styles.dropdownButton} onClick={() => window.location.href = './prosesweb.html'}>
                 📄 Docs API
               </button>
             </div>
