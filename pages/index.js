@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import Script from "next/script";
 
-// --- Komponen Global Styles ---
-// Komponen ini menyuntikkan CSS global, keyframes, dan media query ke dalam <head> dokumen.
+// --- GlobalStyles Component ---
+// This component injects global CSS, keyframes, and media queries into the document's <head>.
 const GlobalStyles = () => {
   const styleContent = `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -23,7 +23,7 @@ const GlobalStyles = () => {
       -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Gaya dasar untuk konten Markdown */
+    /* Base styles for Markdown content */
     .prose p { margin: 1em 0; line-height: 1.65; }
     .prose h1, .prose h2, .prose h3 { margin: 1.5em 0 0.8em; font-weight: 600; color: #1e293b; }
     .prose strong { font-weight: 600; color: #1e293b; }
@@ -31,7 +31,7 @@ const GlobalStyles = () => {
     .prose a:hover { text-decoration: underline; }
     .prose ul { list-style-type: disc; padding-left: 1.5em; }
 
-    /* Media Query untuk desain responsif */
+    /* Media Query for responsive design */
     @media (min-width: 1024px) {
       .sidebar {
         position: relative !important;
@@ -49,7 +49,7 @@ const GlobalStyles = () => {
 };
 
 
-// --- Komponen Ikon (Tidak Berubah) ---
+// --- Icon Component ---
 const Icon = ({ name, style }) => {
   const icons = {
     menu: <svg style={style} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="18" x2="20" y2="18" /></svg>,
@@ -63,11 +63,11 @@ const Icon = ({ name, style }) => {
   return icons[name] || null;
 };
 
-// --- Komponen Blok Konten ---
+// --- Content Block Components ---
 
 const HtmlPreview = ({ content }) => (
   <div style={styles.contentBlock.htmlPreviewContainer}>
-    <div style={styles.contentBlock.htmlPreviewHeader}>Pratinjau HTML</div>
+    <div style={styles.contentBlock.htmlPreviewHeader}>HTML Preview</div>
     <iframe style={styles.contentBlock.htmlPreviewIframe} srcDoc={content} title="HTML Preview" sandbox="allow-scripts" />
   </div>
 );
@@ -94,7 +94,7 @@ const CodeBlock = ({ language, content }) => {
         <span style={styles.contentBlock.codeLanguage}>{language}</span>
         <button onClick={handleCopy} style={copyButtonStyle} onMouseEnter={() => setIsHover(true)} onMouseLeave={() => setIsHover(false)}>
           {isCopied ? <Icon name="check" style={{ width: 12, height: 12, color: '#34d399' }} /> : <Icon name="copy" style={{ width: 12, height: 12 }} />}
-          {isCopied ? 'Tersalin!' : 'Salin Kode'}
+          {isCopied ? 'Copied!' : 'Copy Code'}
         </button>
       </div>
       <pre style={styles.contentBlock.codePre}><code style={styles.contentBlock.codeContent}>{content}</code></pre>
@@ -116,24 +116,26 @@ const renderContentBlock = (block, index) => {
     }
 };
 
-// --- Komponen Aplikasi Utama ---
+// --- Main App Component ---
 export default function App() {
   const [input, setInput] = useState('');
   const [result, setResult] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState(null); // State for Turnstile token
+  const [turnstileToken, setTurnstileToken] = useState(null);
   const textareaRef = useRef(null);
   const resultContainerRef = useRef(null);
 
-  useEffect(() => { document.title = "Chat AI Canva | Versi CSS-in-JS"; }, []);
+  useEffect(() => { document.title = "Chat AI Canva | CSS-in-JS Version"; }, []);
+  
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [input]);
+
   useEffect(() => {
     if (resultContainerRef.current) {
       resultContainerRef.current.scrollTop = resultContainerRef.current.scrollHeight;
@@ -145,7 +147,6 @@ export default function App() {
     window.onTurnstileSuccess = (token) => {
       setTurnstileToken(token);
     };
-    // Cleanup function
     return () => {
       delete window.onTurnstileSuccess;
     }
@@ -154,9 +155,8 @@ export default function App() {
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 
-    // Check for Turnstile token before sending
     if (!turnstileToken) {
-      alert("Verifikasi bot diperlukan sebelum mengirim.");
+      alert("Bot verification is required before sending.");
       return;
     }
 
@@ -165,16 +165,19 @@ export default function App() {
     setError('');
     
     try {
-      const res = await fetch('/api/canva', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // Send the query and the Turnstile token
-        body: JSON.stringify({ query: input, token: turnstileToken }),
+      // API request as per your requirement
+      const res = await fetch("/api/canva", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: input,
+          token: turnstileToken // Token from Cloudflare Turnstile
+        }),
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Gagal mem-parsing respons error dari server.' }));
-        throw new Error(errorData.error || `Terjadi kesalahan pada server: ${res.statusText}`);
+        const errorData = await res.json().catch(() => ({ error: 'Failed to parse error response from server.' }));
+        throw new Error(errorData.error || `Server error occurred: ${res.statusText}`);
       }
 
       const data = await res.json();
@@ -182,11 +185,11 @@ export default function App() {
       if (Array.isArray(data.result)) {
         setResult(data.result);
       } else {
-        throw new Error('Format respons dari API tidak valid. Diharapkan sebuah array.');
+        throw new Error('Invalid response format from API. Expected an array.');
       }
 
     } catch (e) {
-      setError(e.message || 'Gagal terhubung ke API.');
+      setError(e.message || 'Failed to connect to the API.');
     } finally {
       setLoading(false);
       // Reset the Turnstile widget for the next interaction
@@ -229,17 +232,17 @@ export default function App() {
             <button onClick={() => setIsSidebarOpen(false)} className="close-button" style={styles.sidebar.closeButton}><Icon name="close" style={{ width: 20, height: 20 }} /></button>
           </div>
           <nav style={styles.sidebar.nav}>
-            <a href="#" style={{...styles.sidebar.navLink, ...styles.sidebar.navLinkActive}}>Obrolan Baru</a>
-            <a href="/prosesweb.html" style={styles.sidebar.navLink}>Riwayat</a>
-            <a href="/document.html" style={styles.sidebar.navLink}>Dokumentasi API</a>
+            <a href="#" style={{...styles.sidebar.navLink, ...styles.sidebar.navLinkActive}}>New Chat</a>
+            <a href="/prosesweb.html" style={styles.sidebar.navLink}>History</a>
+            <a href="/document.html" style={styles.sidebar.navLink}>API Documentation</a>
           </nav>
         </div>
         
-        {/* --- Konten Utama --- */}
+        {/* --- Main Content --- */}
         <div style={styles.mainContent.container}>
           <header style={styles.mainContent.header}>
             <button onClick={() => setIsSidebarOpen(true)} className="menu-button" style={styles.mainContent.menuButton}><Icon name="menu" style={{ width: 24, height: 24 }} /></button>
-            <div style={{ flex: 1, textAlign: 'center' }}><h1 style={styles.mainContent.title}>Antarmuka Chat AI</h1></div>
+            <div style={{ flex: 1, textAlign: 'center' }}><h1 style={styles.mainContent.title}>AI Chat Interface</h1></div>
           </header>
 
           <main ref={resultContainerRef} style={styles.mainContent.chatArea}>
@@ -248,19 +251,19 @@ export default function App() {
                     <div style={styles.mainContent.emptyStateContainer}>
                         <Icon name="bot" style={{ width: 64, height: 64, margin: '0 auto', color: '#cbd5e1' }}/>
                         <h2 style={styles.mainContent.emptyStateTitle}>Chat AI Canva</h2>
-                        <p style={styles.mainContent.emptyStateSubtitle}>Mulai percakapan dengan mengirimkan permintaan di bawah.</p>
+                        <p style={styles.mainContent.emptyStateSubtitle}>Start a conversation by sending a prompt below.</p>
                     </div>
                 )}
                 {result.length > 0 && <div>{result.map(renderContentBlock)}</div>}
                 {loading && (
                     <div style={styles.mainContent.loadingIndicator}>
                         <div style={{...styles.mainContent.spinner}}></div>
-                        <p>AI sedang memproses, mohon tunggu...</p>
+                        <p>AI is processing, please wait...</p>
                     </div>
                 )}
                 {error && (
                     <div style={styles.mainContent.errorBox}>
-                        <p><strong style={{fontWeight: 600}}>Terjadi Kesalahan:</strong> {error}</p>
+                        <p><strong style={{fontWeight: 600}}>An Error Occurred:</strong> {error}</p>
                     </div>
                 )}
             </div>
@@ -277,12 +280,12 @@ export default function App() {
                 style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}
               ></div>
               <div style={{ position: 'relative' }}>
-                <textarea ref={textareaRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Kirim permintaan ke AI... (misal: 'buatkan tombol login dengan efek hover')" disabled={loading} rows={1} style={styles.footer.textarea} />
+                <textarea ref={textareaRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Send a prompt to the AI... (e.g., 'create a login button with a hover effect')" disabled={loading} rows={1} style={styles.footer.textarea} />
                 <button onClick={handleSend} disabled={loading || !input.trim()} style={styles.footer.sendButton(loading || !input.trim())}>
                   <Icon name="send" style={{ width: 20, height: 20 }} />
                 </button>
               </div>
-              <p style={styles.footer.disclaimer}>Chat AI Canva dapat memberikan informasi yang tidak akurat. Verifikasi respons penting.</p>
+              <p style={styles.footer.disclaimer}>Chat AI Canva may provide inaccurate information. It's important to verify the responses.</p>
             </div>
           </footer>
         </div>
@@ -293,7 +296,7 @@ export default function App() {
   );
 }
 
-// --- Objek Gaya (CSS-in-JS) ---
+// --- Style Object (CSS-in-JS) ---
 const styles = {
   appContainer: { display: 'flex', height: '100vh' },
   sidebar: {
@@ -304,18 +307,18 @@ const styles = {
     },
     header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderBottom: '1px solid #e2e8f0' },
     logoContainer: { display: 'flex', alignItems: 'center', gap: '0.75rem' },
-    title: { fontWeight: 700, fontSize: '1.125rem', color: '#1e293b' },
-    closeButton: { padding: '0.25rem', borderRadius: '9999px' },
+    title: { fontWeight: 700, fontSize: '1.125rem', color: '#1e293b', margin: 0 },
+    closeButton: { padding: '0.25rem', borderRadius: '9999px', background: 'none', border: 'none', cursor: 'pointer' },
     nav: { padding: '1rem' },
     navLink: { display: 'block', padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, color: '#475569', textDecoration: 'none', marginTop: '0.25rem' },
     navLinkActive: { backgroundColor: '#f1f5f9', color: '#1e293b' },
     overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.3)', zIndex: 20 },
   },
   mainContent: {
-    container: { flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' },
+    container: { flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#f8fafc' },
     header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(4px)', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 10 },
-    menuButton: { padding: '0.25rem', borderRadius: '9999px' },
-    title: { fontSize: '1.125rem', fontWeight: 600, color: '#1e293b' },
+    menuButton: { padding: '0.25rem', borderRadius: '9999px', background: 'none', border: 'none', cursor: 'pointer' },
+    title: { fontSize: '1.125rem', fontWeight: 600, color: '#1e293b', margin: 0 },
     chatArea: { flex: 1, overflowY: 'auto', padding: '2rem' },
     emptyStateContainer: { textAlign: 'center', paddingTop: '5rem', paddingBottom: '5rem' },
     emptyStateTitle: { marginTop: '1rem', fontSize: '1.5rem', fontWeight: 700, color: '#334155' },
@@ -325,22 +328,26 @@ const styles = {
     errorBox: { padding: '1rem', backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: '8px' },
   },
   footer: {
-    container: { padding: '1.5rem', backgroundColor: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(4px)', borderTop: '1px solid #e2e8f0' },
+    container: { padding: '1.5rem', backgroundColor: 'rgba(248, 250, 252, 0.6)', backdropFilter: 'blur(4px)', borderTop: '1px solid #e2e8f0' },
     textarea: {
       width: '100%', boxSizing: 'border-box', padding: '1rem 3.5rem 1rem 1rem', fontSize: '1rem', backgroundColor: '#ffffff',
       border: '1px solid #cbd5e1', borderRadius: '12px', resize: 'none', outline: 'none',
       boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)', transition: 'border-color 0.2s, box-shadow 0.2s',
+      fontFamily: "'Inter', sans-serif",
     },
     sendButton: (disabled) => ({
       position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
-      padding: '0.5rem', borderRadius: '9999px', transition: 'background-color 0.2s',
+      padding: '0.5rem', borderRadius: '9999px', transition: 'background-color 0.2s, opacity 0.2s',
       cursor: disabled ? 'not-allowed' : 'pointer',
       opacity: disabled ? 0.5 : 1,
       backgroundColor: disabled ? '#e2e8f0' : '#4f46e5',
       color: disabled ? '#94a3b8' : '#ffffff',
       border: 'none',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
     }),
-    disclaimer: { textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem' },
+    disclaimer: { textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.75rem' },
   },
   contentBlock: {
     htmlPreviewContainer: { border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', margin: '1rem 0', backgroundColor: '#ffffff' },
@@ -350,10 +357,9 @@ const styles = {
     codeHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 1rem', backgroundColor: '#21252b' },
     codeLanguage: { color: '#9da5b4', fontSize: '0.75rem', fontFamily: 'sans-serif', fontWeight: 600, textTransform: 'uppercase' },
     codeCopyButton: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9da5b4', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0.5rem', borderRadius: '6px', transition: 'background-color 0.2s', backgroundColor: '#353a42', border: 'none', cursor: 'pointer' },
-
     codeCopyButtonHover: { backgroundColor: '#40454f', color: '#ffffff' },
     codePre: { padding: '1rem', margin: 0, fontSize: '0.875rem', overflowX: 'auto' },
     codeContent: { color: '#abb2bf', fontFamily: '"Fira Code", "Source Code Pro", Menlo, Monaco, Consolas, "Courier New", monospace' },
   },
 };
-    
+      
