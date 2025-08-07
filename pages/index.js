@@ -1,7 +1,7 @@
 //pages/index.js
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import Script from "next/script";
+import { Turnstile } from '@marsidev/react-turnstile';
 
 // --- GlobalStyles Component ---
 // This component injects global CSS, keyframes, and media queries into the document's <head>.
@@ -123,9 +123,10 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState(null);
+  const [turnstileToken, setTurnstileToken] = useState('');
   const textareaRef = useRef(null);
   const resultContainerRef = useRef(null);
+  const turnstileRef = useRef(null);
 
   useEffect(() => { document.title = "Chat AI Canva | CSS-in-JS Version"; }, []);
   
@@ -141,16 +142,6 @@ export default function App() {
       resultContainerRef.current.scrollTop = resultContainerRef.current.scrollHeight;
     }
   }, [result, loading, error]);
-
-  // Effect to handle Turnstile success callback
-  useEffect(() => {
-    window.onTurnstileSuccess = (token) => {
-      setTurnstileToken(token);
-    };
-    return () => {
-      delete window.onTurnstileSuccess;
-    }
-  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -193,10 +184,8 @@ export default function App() {
     } finally {
       setLoading(false);
       // Reset the Turnstile widget for the next interaction
-      if (window.turnstile) {
-        window.turnstile.reset();
-      }
-      setTurnstileToken(null); // Reset token state so a new challenge is required
+      turnstileRef.current?.reset();
+      setTurnstileToken(''); // Reset token state
     }
   };
 
@@ -215,12 +204,6 @@ export default function App() {
   return (
     <>
       <GlobalStyles />
-      {/* Turnstile script from Cloudflare */}
-      <Script
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-        async
-        defer
-      />
       <div style={styles.appContainer}>
         {/* --- Sidebar --- */}
         <div style={sidebarStyle} className="sidebar">
@@ -271,14 +254,14 @@ export default function App() {
           
           <footer style={styles.footer.container}>
             <div style={{ maxWidth: 896, margin: '0 auto' }}>
-              {/* Turnstile Challenge Element */}
-              <div
-                className="cf-turnstile"
-                data-sitekey="0x4AAAAAAADn5gY15W5A912C" // IMPORTANT: Replace with your actual Cloudflare Turnstile site key
-                data-callback="onTurnstileSuccess"
-                data-theme="light"
+              {/* Turnstile Challenge Component */}
+              <Turnstile
+                ref={turnstileRef}
+                sitekey="0x4AAAAAABpPhesYPXS-t09V" // Your actual site key
+                onSuccess={(token) => setTurnstileToken(token)}
+                options={{ theme: 'light' }}
                 style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}
-              ></div>
+              />
               <div style={{ position: 'relative' }}>
                 <textarea ref={textareaRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Send a prompt to the AI... (e.g., 'create a login button with a hover effect')" disabled={loading} rows={1} style={styles.footer.textarea} />
                 <button onClick={handleSend} disabled={loading || !input.trim()} style={styles.footer.sendButton(loading || !input.trim())}>
@@ -362,4 +345,4 @@ const styles = {
     codeContent: { color: '#abb2bf', fontFamily: '"Fira Code", "Source Code Pro", Menlo, Monaco, Consolas, "Courier New", monospace' },
   },
 };
-      
+    
