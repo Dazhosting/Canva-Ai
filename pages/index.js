@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import Turnstile from '@marsidev/react-turnstile';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function Home() {
   const [query, setQuery] = useState('');
