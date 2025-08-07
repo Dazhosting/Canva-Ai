@@ -1,5 +1,7 @@
+//pages/index.js
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import Script from "next/script";
 
 // --- Komponen Global Styles ---
 // Komponen ini menyuntikkan CSS global, keyframes, dan media query ke dalam <head> dokumen.
@@ -121,6 +123,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState(null); // State for Turnstile token
   const textareaRef = useRef(null);
   const resultContainerRef = useRef(null);
 
@@ -137,8 +140,26 @@ export default function App() {
     }
   }, [result, loading, error]);
 
+  // Effect to handle Turnstile success callback
+  useEffect(() => {
+    window.onTurnstileSuccess = (token) => {
+      setTurnstileToken(token);
+    };
+    // Cleanup function
+    return () => {
+      delete window.onTurnstileSuccess;
+    }
+  }, []);
+
   const handleSend = async () => {
     if (!input.trim() || loading) return;
+
+    // Check for Turnstile token before sending
+    if (!turnstileToken) {
+      alert("Verifikasi bot diperlukan sebelum mengirim.");
+      return;
+    }
+
     setLoading(true);
     setResult([]); 
     setError('');
@@ -147,7 +168,8 @@ export default function App() {
       const res = await fetch('/api/canva', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: input }),
+        // Send the query and the Turnstile token
+        body: JSON.stringify({ query: input, token: turnstileToken }),
       });
 
       if (!res.ok) {
@@ -167,6 +189,11 @@ export default function App() {
       setError(e.message || 'Gagal terhubung ke API.');
     } finally {
       setLoading(false);
+      // Reset the Turnstile widget for the next interaction
+      if (window.turnstile) {
+        window.turnstile.reset();
+      }
+      setTurnstileToken(null); // Reset token state so a new challenge is required
     }
   };
 
@@ -185,6 +212,12 @@ export default function App() {
   return (
     <>
       <GlobalStyles />
+      {/* Turnstile script from Cloudflare */}
+      <Script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        async
+        defer
+      />
       <div style={styles.appContainer}>
         {/* --- Sidebar --- */}
         <div style={sidebarStyle} className="sidebar">
@@ -235,6 +268,14 @@ export default function App() {
           
           <footer style={styles.footer.container}>
             <div style={{ maxWidth: 896, margin: '0 auto' }}>
+              {/* Turnstile Challenge Element */}
+              <div
+                className="cf-turnstile"
+                data-sitekey="0x4AAAAAAADn5gY15W5A912C" // IMPORTANT: Replace with your actual Cloudflare Turnstile site key
+                data-callback="onTurnstileSuccess"
+                data-theme="light"
+                style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}
+              ></div>
               <div style={{ position: 'relative' }}>
                 <textarea ref={textareaRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Kirim permintaan ke AI... (misal: 'buatkan tombol login dengan efek hover')" disabled={loading} rows={1} style={styles.footer.textarea} />
                 <button onClick={handleSend} disabled={loading || !input.trim()} style={styles.footer.sendButton(loading || !input.trim())}>
@@ -309,6 +350,7 @@ const styles = {
     codeHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 1rem', backgroundColor: '#21252b' },
     codeLanguage: { color: '#9da5b4', fontSize: '0.75rem', fontFamily: 'sans-serif', fontWeight: 600, textTransform: 'uppercase' },
     codeCopyButton: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9da5b4', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0.5rem', borderRadius: '6px', transition: 'background-color 0.2s', backgroundColor: '#353a42', border: 'none', cursor: 'pointer' },
+
     codeCopyButtonHover: { backgroundColor: '#40454f', color: '#ffffff' },
     codePre: { padding: '1rem', margin: 0, fontSize: '0.875rem', overflowX: 'auto' },
     codeContent: { color: '#abb2bf', fontFamily: '"Fira Code", "Source Code Pro", Menlo, Monaco, Consolas, "Courier New", monospace' },
